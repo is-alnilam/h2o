@@ -158,8 +158,11 @@ As an example, it is possible to log timestamps in millisecond resolution using 
 <tr><td><code>%v</code><td>canonical server name
 <tr><td><code>%{<i>VARNAME</i>}e</code><td>request environment variable (since version 2.3; see <a href="configure/mruby.html#logging-arbitrary-variable">Logging Arbitrary Variable</a>)
 <tr><td><code>%{<i>HEADERNAME</i>}i</code><td>value of the given request header (e.g. <code>%{user-agent}i</code>)
+<tr><td><code>%i</code><td>all request headers as a JSON-style list
 <tr><td><code>%{<i>HEADERNAME</i>}o</code><td>value of the given response header sent to client (e.g. <code>%{set-cookie}o</code>)
+<tr><td><code>%o</code><td>all response headers sent to client as a JSON-style list
 <tr><td><code>%&lt;{<i>HEADERNAME</i>}o</code><td>value of the response header received from upstream (or initially generated)
+<tr><td><code>%&lt;o</code><td>all response headers received from upstream (or initially generated) as a JSON-style list
 <tr><td><code>%{<i>NAME</i>}x</code><td>various extensions.  <code>NAME</code> must be one listed in the following tables.  A dash (<code>-</code>) is emitted if the directive is not applicable to the request being logged.
 <table>
 <caption>Access Timings</caption>
