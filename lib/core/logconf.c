@@ -85,6 +85,8 @@ enum {
     ELEMENT_TYPE_PROXY_SSL_CIPHER,              /* ${proxy.ssl.cipher}x */
     ELEMENT_TYPE_PROXY_SSL_CIPHER_BITS,         /* ${proxy.ssl.cipher_bits}x */
     ELEMENT_TYPE_SSL_SERVER_NAME,               /* ${ssl.server-name}x */
+    ELEMENT_TYPE_IN_HEADERS_ALL,                /* %i */
+    ELEMENT_TYPE_OUT_HEADERS_ALL,               /* %o */
     NUM_ELEMENT_TYPES
 };
 
@@ -341,8 +343,10 @@ h2o_logconf_t *h2o_logconf_compile(const char *fmt, int escape, char *errbuf)
                     TYPE_MAP('b', ELEMENT_TYPE_BYTES_SENT);
                     TYPE_MAP('H', ELEMENT_TYPE_PROTOCOL);
                     TYPE_MAP('h', ELEMENT_TYPE_REMOTE_ADDR);
+                    TYPE_MAP('i', ELEMENT_TYPE_IN_HEADERS_ALL);
                     TYPE_MAP('l', ELEMENT_TYPE_LOGNAME);
                     TYPE_MAP('m', ELEMENT_TYPE_METHOD);
+                    TYPE_MAP('o', ELEMENT_TYPE_OUT_HEADERS_ALL);
                     TYPE_MAP('p', ELEMENT_TYPE_LOCAL_PORT);
                     TYPE_MAP('e', ELEMENT_TYPE_ENV_VAR);
                     TYPE_MAP('q', ELEMENT_TYPE_QUERY);
@@ -757,6 +761,38 @@ char *h2o_log_request(h2o_logconf_t *logconf, h2o_req_t *req, size_t *len, char 
             goto EmitNull;                                                                                                         \
     } while (0)
 
+#define EMIT_HEADERS(__headers)                                                                                                    \
+    do {                                                                                                                           \
+        h2o_headers_t *headers = (__headers);                                                                                      \
+        if (headers->size == 0)                                                                                                    \
+            goto EmitNull;                                                                                                         \
+        RESERVE(2);                                                                                                                \
+        *pos++ = '[';                                                                                                              \
+        *pos++ = '"';                                                                                                              \
+        ssize_t cursor = -1;                                                                                                       \
+        int subsequent = 0;                                                                                                        \
+        for (++cursor; cursor < headers->size; ++cursor) {                                                                         \
+            const h2o_header_t *header = headers->entries + cursor;                                                                \
+            if (subsequent) {                                                                                                      \
+                RESERVE(3);                                                                                                        \
+                *pos++ = '"';                                                                                                      \
+                *pos++ = ',';                                                                                                      \
+                *pos++ = '"';                                                                                                      \
+            }                                                                                                                      \
+            RESERVE(header->name->len *unsafe_factor);                                                                             \
+            pos = append_unsafe_string(pos, header->name->base, header->name->len);                                                \
+            RESERVE(3);                                                                                                            \
+            *pos++ = ':';                                                                                                          \
+            *pos++ = ' ';                                                                                                          \
+            RESERVE(header->value.len *unsafe_factor);                                                                             \
+            pos = append_unsafe_string(pos, header->value.base, header->value.len);                                                \
+            subsequent = 1;                                                                                                        \
+        }                                                                                                                          \
+        RESERVE(2);                                                                                                                \
+        *pos++ = '"';                                                                                                              \
+        *pos++ = ']';                                                                                                              \
+    } while (0)
+
         case ELEMENT_TYPE_IN_HEADER_TOKEN:
             EMIT_HEADER(&req->headers, 0, h2o_find_header, element->data.header_token);
             break;
@@ -769,6 +805,9 @@ char *h2o_log_request(h2o_logconf_t *logconf, h2o_req_t *req, size_t *len, char 
             RESERVE(req->upgrade.len * unsafe_factor);
             pos = append_unsafe_string(pos, req->upgrade.base, req->upgrade.len);
             break;
+        case ELEMENT_TYPE_IN_HEADERS_ALL:
+            EMIT_HEADERS(&req->headers);
+            break;
         case ELEMENT_TYPE_OUT_HEADER_TOKEN:
             EMIT_HEADER(element->original_response ? &req->res.original.headers : &req->res.headers, 0, h2o_find_header,
                         element->data.header_token);
@@ -780,6 +819,9 @@ char *h2o_log_request(h2o_logconf_t *logconf, h2o_req_t *req, size_t *len, char 
         case ELEMENT_TYPE_OUT_HEADER_TOKEN_CONCATENATED:
             EMIT_HEADER(element->original_response ? &req->res.original.headers : &req->res.headers, 1, h2o_find_header,
                         element->data.header_token);
+            break;
+        case ELEMENT_TYPE_OUT_HEADERS_ALL:
+            EMIT_HEADERS(element->original_response ? &req->res.original.headers : &req->res.headers);
             break;
 
 #undef EMIT_HEADER
