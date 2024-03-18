@@ -87,6 +87,7 @@ enum {
     ELEMENT_TYPE_SSL_SERVER_NAME,               /* ${ssl.server-name}x */
     ELEMENT_TYPE_IN_HEADERS_ALL,                /* %i */
     ELEMENT_TYPE_OUT_HEADERS_ALL,               /* %o */
+    ELEMENT_TYPE_PROCESS_ID,                    /* %P */
     NUM_ELEMENT_TYPES
 };
 
@@ -348,6 +349,7 @@ h2o_logconf_t *h2o_logconf_compile(const char *fmt, int escape, char *errbuf)
                     TYPE_MAP('m', ELEMENT_TYPE_METHOD);
                     TYPE_MAP('o', ELEMENT_TYPE_OUT_HEADERS_ALL);
                     TYPE_MAP('p', ELEMENT_TYPE_LOCAL_PORT);
+                    TYPE_MAP('P', ELEMENT_TYPE_PROCESS_ID);
                     TYPE_MAP('e', ELEMENT_TYPE_ENV_VAR);
                     TYPE_MAP('q', ELEMENT_TYPE_QUERY);
                     TYPE_MAP('r', ELEMENT_TYPE_REQUEST_LINE);
@@ -629,6 +631,10 @@ char *h2o_log_request(h2o_logconf_t *logconf, h2o_req_t *req, size_t *len, char 
         case ELEMENT_TYPE_REMOTE_PORT: /* %{remote}p */
             RESERVE(sizeof(H2O_UINT16_LONGEST_STR) - 1);
             pos = append_port(pos, req->conn->callbacks->get_peername, req->conn, nullexpr);
+            break;
+        case ELEMENT_TYPE_PROCESS_ID: /* %P */
+            RESERVE(sizeof(H2O_UINT32_LONGEST_STR) - 1);
+            pos += sprintf(pos, "%i", (int)getpid());
             break;
         case ELEMENT_TYPE_ENV_VAR: /* %{..}e */ {
             h2o_iovec_t *env_var = h2o_req_getenv(req, element->data.name.base, element->data.name.len, 0);
