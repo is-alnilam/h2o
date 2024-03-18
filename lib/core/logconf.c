@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/utsname.h>
 #include "h2o.h"
 
 enum {
@@ -88,6 +89,7 @@ enum {
     ELEMENT_TYPE_IN_HEADERS_ALL,                /* %i */
     ELEMENT_TYPE_OUT_HEADERS_ALL,               /* %o */
     ELEMENT_TYPE_PROCESS_ID,                    /* %P */
+    ELEMENT_TYPE_HOSTNAME,                      /* %N */
     NUM_ELEMENT_TYPES
 };
 
@@ -347,6 +349,7 @@ h2o_logconf_t *h2o_logconf_compile(const char *fmt, int escape, char *errbuf)
                     TYPE_MAP('i', ELEMENT_TYPE_IN_HEADERS_ALL);
                     TYPE_MAP('l', ELEMENT_TYPE_LOGNAME);
                     TYPE_MAP('m', ELEMENT_TYPE_METHOD);
+                    TYPE_MAP('N', ELEMENT_TYPE_HOSTNAME);
                     TYPE_MAP('o', ELEMENT_TYPE_OUT_HEADERS_ALL);
                     TYPE_MAP('p', ELEMENT_TYPE_LOCAL_PORT);
                     TYPE_MAP('P', ELEMENT_TYPE_PROCESS_ID);
@@ -624,6 +627,25 @@ char *h2o_log_request(h2o_logconf_t *logconf, h2o_req_t *req, size_t *len, char 
             RESERVE(req->input.method.len * unsafe_factor);
             pos = append_unsafe_string(pos, req->input.method.base, req->input.method.len);
             break;
+        case ELEMENT_TYPE_HOSTNAME: {
+            static char hostname[sizeof(((struct utsname *) 0)->nodename)];
+            static size_t hostname_len = 0;
+            if (hostname_len == 0) {
+                struct utsname unamebuf;
+                if (uname(&unamebuf) != 0) {
+                    RESERVE(sizeof("unknown"));
+                    pos = append_safe_string(pos, "unknown", sizeof("unknown"));
+                } else {
+                    hostname_len = strlen(unamebuf.nodename);
+                    memcpy(&hostname, unamebuf.nodename, hostname_len);
+                }
+            }
+            if (hostname_len != 0) {
+                RESERVE(hostname_len);
+                pos = append_safe_string(pos, hostname, hostname_len);
+            }
+            break;
+        }
         case ELEMENT_TYPE_LOCAL_PORT: /* %p */
             RESERVE(sizeof(H2O_UINT16_LONGEST_STR) - 1);
             pos = append_port(pos, req->conn->callbacks->get_sockname, req->conn, nullexpr);
