@@ -169,7 +169,8 @@ static int on_config_unset_core(h2o_configurator_command_t *cmd, h2o_configurato
     struct headers_util_add_arg_t args[num_headers];
     for (size_t i = 0; i != num_headers; ++i) {
         args[i].node = headers[i];
-        if (cmd_id == H2O_HEADERS_CMD_UNSET || cmd_id == H2O_HEADERS_CMD_UNSETUNLESS) {
+        if (cmd_id == H2O_HEADERS_CMD_UNSET || cmd_id == H2O_HEADERS_CMD_UNSETUNLESS ||
+            cmd_id == H2O_HEADERS_CMD_SET_REQUEST_ID || cmd_id == H2O_HEADERS_CMD_SETIFEMPTY_REQUEST_ID) {
             if (extract_name(args[i].node->data.scalar, strlen(args[i].node->data.scalar), &args[i].name) != 0) {
                 h2o_configurator_errprintf(cmd, args[i].node, "invalid header name");
                 return -1;
@@ -214,6 +215,17 @@ static int on_config_cookie_unsetunless(h2o_configurator_command_t *cmd, h2o_con
     return on_config_unset_core(cmd, ctx, node, H2O_HEADERS_CMD_COOKIE_UNSETUNLESS);
 }
 
+static int on_config_set_request_id(h2o_configurator_command_t *cmd, h2o_configurator_context_t *ctx, yoml_t *node)
+{
+    /* The 'unset' function extracts only a header name, and does not expect to also find a value. */
+    return on_config_unset_core(cmd, ctx, node, H2O_HEADERS_CMD_SET_REQUEST_ID);
+}
+static int on_config_set_request_id_if_empty(h2o_configurator_command_t *cmd, h2o_configurator_context_t *ctx, yoml_t *node)
+{
+    /* The 'unset' function extracts only a header name, and does not expect to also find a value. */
+    return on_config_unset_core(cmd, ctx, node, H2O_HEADERS_CMD_SETIFEMPTY_REQUEST_ID);
+}
+
 #define DEFINE_2ARG(fn, cmd_id)                                                                                                    \
     static int fn(h2o_configurator_command_t *cmd, h2o_configurator_context_t *ctx, yoml_t *node)                                  \
     {                                                                                                                              \
@@ -251,6 +263,8 @@ void h2o_configurator_define_headers_commands(h2o_globalconf_t *global_conf, h2o
     DEFINE_CMD_NAME(unsetunless_directive, ".unsetunless");
     DEFINE_CMD_NAME(cookie_unset_directive, ".cookie.unset");
     DEFINE_CMD_NAME(cookie_unsetunless_directive, ".cookie.unsetunless");
+    DEFINE_CMD_NAME(set_request_id_directive, ".setrequestid");
+    DEFINE_CMD_NAME(set_request_id_if_empty_directive, ".setrequestidifempty");
 #undef DEFINE_CMD_NAME
 
 #define DEFINE_CMD(name, cb)                                                                                                       \
@@ -268,5 +282,7 @@ void h2o_configurator_define_headers_commands(h2o_globalconf_t *global_conf, h2o
     DEFINE_CMD(unsetunless_directive, on_config_header_unsetunless);
     DEFINE_CMD(cookie_unset_directive, on_config_cookie_unset);
     DEFINE_CMD(cookie_unsetunless_directive, on_config_cookie_unsetunless);
+    DEFINE_CMD(set_request_id_directive, on_config_set_request_id);
+    DEFINE_CMD(set_request_id_if_empty_directive, on_config_set_request_id_if_empty);
 #undef DEFINE_CMD
 }
