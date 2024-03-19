@@ -85,6 +85,43 @@ static void format_uuid_rfc4122(char *dst, uint8_t *octets, uint8_t version)
     /* '\0' is set by h2o_hex_encode() */
 }
 
+static void format_u128_crockford_base32(char *dst, uint64_t high, uint64_t low)
+{
+    static char *CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((25 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((24 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((23 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((22 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((21 * 5) - 64)) & 0x1f];
+    *dst++ = '-';
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((20 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((19 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((18 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((17 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((16 * 5) - 64)) & 0x1f];
+    *dst++ = '-';
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((15 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((14 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(high >> ((13 * 5) - 64)) & 0x1f];
+    *dst++ = CROCKFORD[((high << 4) | (low >> (12 * 5)))  & 0x1f];  // Merges the two halves -- one bit from high, 4 from low
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  (11 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  (10 * 5))       & 0x1f];
+    *dst++ = '-';
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 9 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 8 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 7 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 6 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 5 * 5))       & 0x1f];
+    *dst++ = '-';
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 4 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 3 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 2 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low  >>  ( 1 * 5))       & 0x1f];
+    *dst++ = CROCKFORD[(uint8_t)(low)                     & 0x1f];
+    *dst++ = 0;
+}
+
 void h2o_generate_uuidv4(char *dst)
 {
     // RFC-4122 "A Universally Unique IDentifier (UUID) URN Namespace"
@@ -93,4 +130,11 @@ void h2o_generate_uuidv4(char *dst)
     uint8_t octets[16];
     ptls_openssl_random_bytes((void *)&octets, sizeof(octets));
     format_uuid_rfc4122(dst, octets, 4);
+}
+
+void h2o_generate_random_u128_base32(char* dst)
+{
+    uint64_t octets[2];
+    ptls_openssl_random_bytes((void *)&octets, sizeof(octets));
+    format_u128_crockford_base32(dst, octets[0], octets[1]);
 }
