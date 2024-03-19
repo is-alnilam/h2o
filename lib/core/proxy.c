@@ -293,7 +293,7 @@ static void build_request(h2o_req_t *req, h2o_iovec_t *method, h2o_url_t *url, h
     if (req->overrides != NULL && req->overrides->headers_cmds != NULL) {
         h2o_headers_command_t *cmd;
         for (cmd = req->overrides->headers_cmds; cmd->cmd != H2O_HEADERS_CMD_NULL; ++cmd)
-            h2o_rewrite_headers(&req->pool, headers, cmd);
+            h2o_rewrite_headers(&req->pool, headers, cmd, req);
     }
 }
 
