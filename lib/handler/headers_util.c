@@ -114,6 +114,33 @@ static void remove_header(h2o_headers_t *headers, h2o_headers_command_t *cmd)
     headers->size = dst;
 }
 
+inline const char *h2o_request_get_req_id(struct st_h2o_req_t *req)
+{
+    if (req->_request_id.is_initialized)
+        return req->_request_id.str;
+    h2o_generate_random_u128_base32(req->_request_id.str);
+    req->_request_id.is_initialized = 1;
+    return req->_request_id.str;
+}
+
+static void request_id_header(struct st_h2o_req_t *req, h2o_mem_pool_t *pool, h2o_headers_t *headers, h2o_headers_command_t *cmd)
+{
+    /* Check if header is already present and remove or abort if it is */
+    if (cmd->cmd == H2O_HEADERS_CMD_SETIFEMPTY_REQUEST_ID) {
+        if (find_header(headers, cmd->args[0].name) != NULL) {
+            return;
+        }
+    } else {
+        remove_header(headers, cmd);
+    }
+
+    if (h2o_iovec_is_token(cmd->args[0].name)) {
+        h2o_add_header(pool, headers, (void *)cmd->args[0].name, NULL, h2o_request_get_req_id(req), H2O_U128_BASE32_LEN);
+    } else {
+        h2o_add_header_by_str(pool, headers, cmd->args[0].name->base, cmd->args[0].name->len, 0, NULL, h2o_request_get_req_id(req), H2O_U128_BASE32_LEN);
+    }
+}
+
 static void dispose_h2o_headers_command(void *_cmds)
 {
     h2o_headers_command_t *cmds = _cmds;
@@ -154,7 +181,7 @@ void h2o_headers_append_command(h2o_headers_command_t **cmds, int cmd, h2o_heade
     *cmds = new_cmds;
 }
 
-void h2o_rewrite_headers(h2o_mem_pool_t *pool, h2o_headers_t *headers, h2o_headers_command_t *cmd)
+void h2o_rewrite_headers(h2o_mem_pool_t *pool, h2o_headers_t *headers, h2o_headers_command_t *cmd, struct st_h2o_req_t *req)
 {
     h2o_header_t *target;
 
@@ -190,6 +217,10 @@ void h2o_rewrite_headers(h2o_mem_pool_t *pool, h2o_headers_t *headers, h2o_heade
     case H2O_HEADERS_CMD_COOKIE_UNSET:
     case H2O_HEADERS_CMD_COOKIE_UNSETUNLESS:
         cookie_cmd(pool, headers, cmd);
+        return;
+    case H2O_HEADERS_CMD_SET_REQUEST_ID:
+    case H2O_HEADERS_CMD_SETIFEMPTY_REQUEST_ID:
+        request_id_header(req, pool, headers, cmd);
         return;
     }
 

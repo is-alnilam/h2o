@@ -51,4 +51,14 @@ int h2o_rand(void);
  */
 void h2o_generate_uuidv4(char *dst);
 
+/*
+ * size of a base32 u128 string representation with grouping dashes.
+ */
+#define H2O_U128_BASE32_LEN (sizeof("01234-01234-012345-01234-01234") - 1)
+
+/**
+ * generates and base32-encodes a random 128-bit integer to dst, which must have an enough size, H2O_U128_BASE32_LEN + 1.
+ */
+void h2o_generate_random_u128_base32(char *dst);
+
 #endif
