@@ -1440,6 +1440,14 @@ struct st_h2o_req_t {
     size_t _next_filter_index;
     h2o_timer_t _timeout_entry;
 
+    /**
+     * random 128-bit request ID as base32-format string.
+     */
+    struct {
+        char str[H2O_U128_BASE32_LEN + 1];
+        uint8_t is_initialized;
+    } _request_id;
+
     /* per-request memory pool (placed at the last since the structure is large) */
     h2o_mem_pool_t pool;
 };
@@ -2192,6 +2200,8 @@ enum {
     H2O_HEADERS_CMD_UNSETUNLESS,        /* only keeps the named header(s) */
     H2O_HEADERS_CMD_COOKIE_UNSET,       /* removes the named cookie(s) */
     H2O_HEADERS_CMD_COOKIE_UNSETUNLESS, /* only keeps the named cookie(s) */
+    H2O_HEADERS_CMD_SET_REQUEST_ID,     /* adds an automatically generated request ID, overwriting anything already supplied */
+    H2O_HEADERS_CMD_SETIFEMPTY_REQUEST_ID, /* adds an automatically generated request ID if one is not already present */
 };
 
 typedef enum h2o_headers_command_when {
@@ -2354,7 +2364,7 @@ void h2o_headers_append_command(h2o_headers_command_t **cmds, int cmd, h2o_heade
 /**
  * rewrite headers by the command provided
  */
-void h2o_rewrite_headers(h2o_mem_pool_t *pool, h2o_headers_t *headers, h2o_headers_command_t *cmd);
+void h2o_rewrite_headers(h2o_mem_pool_t *pool, h2o_headers_t *headers, h2o_headers_command_t *cmd, struct st_h2o_req_t *req);
 
 /* lib/handler/http2_debug_state.c */
 
