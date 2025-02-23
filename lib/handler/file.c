@@ -292,7 +292,7 @@ static struct st_h2o_sendfile_generator_t *create_generator(h2o_req_t *req, cons
     if ((flags & H2O_FILE_FLAG_SEND_COMPRESSED) != 0 && req->version >= 0x101) {
         int compressible_types = h2o_get_compressible_types(&req->headers);
         if (compressible_types != 0) {
-            char *variant_path = h2o_mem_alloc_pool(&req->pool, *variant_path, path_len + sizeof(".gz"));
+            char *variant_path = h2o_mem_alloc_pool(&req->pool, *variant_path, path_len + sizeof(".zstd"));
             memcpy(variant_path, path, path_len);
 #define TRY_VARIANT(mask, enc, ext)                                                                                                \
     if ((compressible_types & mask) != 0) {                                                                                        \
@@ -303,6 +303,7 @@ static struct st_h2o_sendfile_generator_t *create_generator(h2o_req_t *req, cons
         }                                                                                                                          \
     }
             TRY_VARIANT(H2O_COMPRESSIBLE_BROTLI, "br", ".br");
+            TRY_VARIANT(H2O_COMPRESSIBLE_ZSTD, "zstd", ".zst");
             TRY_VARIANT(H2O_COMPRESSIBLE_ZSTD, "zstd", ".zstd");
             TRY_VARIANT(H2O_COMPRESSIBLE_GZIP, "gzip", ".gz");
 #undef TRY_VARIANT
